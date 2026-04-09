@@ -5,8 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minimal Emscripten App</title>
-    
+    <title>Quibble Race</title>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/screenfull.js/5.2.0/screenfull.min.js"></script>
     <!-- <svg height="0" xmlns="http://www.w3.org" style="position: absolute; width: 0; height: 0;">
@@ -38,7 +37,9 @@
             font-family: 'QuibbleShort';
             font-size: clamp(1px, 2vw, 16px);
             line-height:1.5;
-            text-shadow: 0.125em 0.125em 0 rgb(0, 0, 0), 0 0.125em 0 rgb(0, 0, 0), 0.125em 0 0 rgb(0, 0, 0);
+            text-shadow: 0.125em 0.125em 0 rgb(0, 0, 0), 
+            0 0.125em 0 rgb(0, 0, 0), 
+            0.125em 0 0 rgb(0, 0, 0);
 
             margin: 0;
             padding: 0;
@@ -53,11 +54,17 @@
             align-items: center;
             justify-content: center;
         }
+        button {
+            outline: none;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        #fullscreen {
+        .canvascontrol {
             position: absolute;
             top: 20px;
-            right: 20px;
             cursor: pointer;
             transition: opacity 0.2s ease, visibility 0.2s;
             opacity: 1;
@@ -76,13 +83,23 @@
             align-items: center;
             justify-content: center;
         }
-        #fullscreen svg {
+        #fullscreen.canvascontrol {
+            right: 20px;
+        }
+        
+        #mute.canvascontrol {
+            left: 20px;
+        }
+        .canvascontrol svg {
             aspect-ratio: 1 / 1;
             width: 100%;
             height: auto;
         }
+        .fullscreen-icon{
+            scale: 0.7;
+        }
 
-        #fullscreen.hidden {
+        .canvascontrol.hidden {
             opacity: 0 !important;
             visibility: hidden !important;
             pointer-events: none; 
@@ -90,7 +107,7 @@
 
         
         :root {
-            --bpad-background: #00845681;
+            --bpad-background: #0084565b;
             --primary-size: 12px;
             --multipler: 0.866;
             --bicon-color: #00000063;
@@ -146,7 +163,9 @@
             border-radius: 9999px;
             padding:5px;
         }
-
+        .buttonpad {
+            opacity: 0.85;
+        }
         .buttonpad button {
             aspect-ratio: 1 / 1;
             width: 85px;
@@ -155,7 +174,6 @@
             -webkit-user-select: none;
             touch-action: none;
             cursor: pointer;
-            outline: none;
 
             background-clip: padding-box;
             background-color: #1515186d;
@@ -275,6 +293,51 @@
             display: block;
         }
 
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 999; /* Sit on top */
+            padding-top: 25vh; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            font-size: 3.9vw;
+            text-shadow: 0.125em 0.125em 0 rgb(0, 0, 0), 
+            0 0.125em 0 rgb(0, 0, 0), 
+            0.125em 0 0 rgb(0, 0, 0);
+        }
+
+            /* Modal Content */
+        .modal-content {
+            background-color: #008456;
+            margin: auto;
+            padding: 20px; 
+            padding-top: 30px;
+            border: 10px solid #000000;
+            border-radius: 10px; 
+            width: 80%;
+        }
+        .modal-content p {
+            margin: 0;
+        }
+
+        .close {
+            color: #ffffff;
+            float: right;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #b3b3b3;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
         @media screen and (pointer: coarse) {
             .desktop {
                 display: none;
@@ -295,6 +358,9 @@
             @media (orientation: portrait) {
                 #fullscreen {
                     visibility: hidden;
+                }
+                .modal {
+                    display: block;
                 }
             }
             
@@ -319,13 +385,46 @@
             max-width: 1000px;
             white-space: normal;
         }
+
+        svg.hidden {
+            display: none;
+        }
+
+
+        
     </style>
 </head>
 <body>
+
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">X</span>
+            <p>QUIBBLE RACE IS BEST ENJOYED IN LANDSCAPE MODE.</p>
+        </div>
+
+    </div>
+
+
     <div id = "game">
-        <button id="fullscreen" class="hidden">
-            <svg id="fullscreen-icon" viewBox="0 0 24 24" width="24" height="24">
-                <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        <button id="fullscreen" class="canvascontrol hidden">
+            <svg id="infull" class="fullscreen-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M10 15H15V10H13.2V13.2H10V15ZM6 15V13.2H2.8V10H1V15H6ZM10 2.8H12.375H13.2V6H15V1H10V2.8ZM6 1V2.8H2.8V6H1V1H6Z" fill="currentColor"/>
+            </svg>
+            <svg id = "outfull" class="fullscreen-icon hidden" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 6L6 6L6 1L4.2 1L4.2 4.2L1 4.2L1 6Z" fill="currentColor"/>
+                <path d="M15 10L10 10L10 15L11.8 15L11.8 11.8L15 11.8L15 10Z" fill="currentColor"/>
+                <path d="M6 15L6 10L1 10L1 11.8L4.2 11.8L4.2 15L6 15Z" fill="currentColor"/>
+                <path d="M10 1L10 6L15 6L15 4.2L11.8 4.2L11.8 1L10 1Z" fill="currentColor"/>
+            </svg>
+        </button>
+        <button id="mute" class="canvascontrol hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" id="muted" class="mute-icon hidden" viewBox="0 0 16 16">
+                <path d="M13.854 5.646a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646c.472.472-.236 1.18-.708.708L11.5 8.707l-1.646 1.647c-.472.472-1.18-.236-.708-.708L10.793 8 9.146 6.354c-.472-.472.236-1.18.708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0M7.315 4a.5.5 0 0 0-.812-.39L4.14 5.5H1.815a.5.5 0 0 0-.5.5v4a.5.5 0 0 0 .5.5H4.14l2.363 1.89a.5.5 0 0 0 .812-.39zM4.627 6.39l1.688-1.35v5.92L4.627 9.61a.5.5 0 0 0-.312-.11h-2v-3h2a.5.5 0 0 0 .312-.11"/>
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" id="unmuted" class="mute-icon" viewBox="0 0 16 16">
+                <path d="M11.53 12.675c1.577-1.239 2.462-2.921 2.459-4.675.003-1.754-.882-3.436-2.46-4.675l-.699.786C12.221 5.141 13.002 6.453 13 8c0 1.61-.83 2.894-2.17 3.889z"/>
+                <path d="M10.132 11.575c1.206-.947 1.883-2.234 1.88-3.575.003-1.341-.674-2.628-1.88-3.575l-.698.723c1.02.756 1.593 1.717 1.59 2.852.004 1.135-.569 2.097-1.59 2.852z"/>
+                <path d="M10.037 8c0 .928-.468 1.819-1.302 2.475l-.698-.66C8.685 9.334 9.05 8.722 9.05 8c0-.751-.387-1.35-1.012-1.815l.698-.66c.834.656 1.302 1.547 1.302 2.475M7.315 4a.5.5 0 0 0-.812-.39L4.14 5.5H1.815a.5.5 0 0 0-.5.5v4a.5.5 0 0 0 .5.5H4.14l2.363 1.89a.5.5 0 0 0 .812-.39zM4.627 6.39l1.688-1.35v5.92L4.627 9.61a.5.5 0 0 0-.312-.11h-2v-3h2a.5.5 0 0 0 .312-.11"/>
             </svg>
         </button>
         <div class="buttonpad" id="dpad">
@@ -380,6 +479,19 @@
 
 
     <script type='text/javascript'>
+        var modal = document.getElementById("myModal");
+
+        var span = document.getElementsByClassName("close")[0];
+
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
         function resizeGame() {
             var dpr = window.devicePixelRatio || 1;
             var gameWidth = 384 / dpr; 
@@ -410,6 +522,9 @@
             },
             printErr: function(...args) {
                 console.error(...args);
+            },
+            setWindowTitle: function(title) {
+                console.log("Window title update blocked: " + title);
             },
             onRuntimeInitialized: function() {
                 console.log('Module is ready!');
@@ -467,8 +582,10 @@
 
 
         const fullscreenbutton = document.getElementById('fullscreen');
+        const mutebutton = document.getElementById('mute');
         const gamebox = document.getElementById('game');
-        let fadeTimeout;
+        let fadeFTimeout;
+        let fadeMTimeout;
 
         fullscreenbutton.addEventListener('click', () => {
             if (screenfull.isEnabled) {
@@ -476,44 +593,77 @@
             }
         });
 
-        function hideButton() {
+        function hideFButton() {
             fullscreenbutton.classList.add('hidden');
         }
-        function showButton(t) {
+        function showFButton(t) {
             if (!screenfull.isEnabled) {
                 return;
             }
             fullscreenbutton.classList.remove('hidden');
-            clearTimeout(fadeTimeout);
-            fadeTimeout = setTimeout(hideButton, t);
+            clearTimeout(fadeFTimeout);
+            fadeFTimeout = setTimeout(hideFButton, t);
         }
 
+        let mute = false;
+        mutebutton.addEventListener('click', () => {
+            mute = !mute;
+            if (mute) {
+                mutebutton.querySelector("#muted").classList.remove('hidden');
+                mutebutton.querySelector("#unmuted").classList.add('hidden');
+                Module.ccall('pauseAudioForWeb', 'v');
+            } else {
+                mutebutton.querySelector("#muted").classList.add('hidden');
+                mutebutton.querySelector("#unmuted").classList.remove('hidden');
+                Module.ccall('resumeAudioForWeb', 'v');
+            }
+        });
+
+        function hideMButton() {
+            mutebutton.classList.add('hidden');
+        }
+        function showMButton(t) {
+            mutebutton.classList.remove('hidden');
+            clearTimeout(fadeMTimeout);
+            fadeMTimeout = setTimeout(hideMButton, t);
+        }
+
+
+
         window.addEventListener('load', () => {
-            showButton(5000); 
+            showFButton(5000); 
+            showMButton(5000); 
         });
 
         gamebox.addEventListener('mousemove', () => {
-            showButton(2000);
+            showFButton(2000);
+            showMButton(2000);
         });
 
         gamebox.addEventListener('pointerdown', (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
                 return; 
             }
-            showButton(5000);
+            showFButton(5000);
+            showMButton(5000);
         });
 
         gamebox.addEventListener('mouseleave', () => {
-            clearTimeout(fadeTimeout);
-            fadeTimeout = setTimeout(hideButton, 100);
+            clearTimeout(fadeFTimeout);
+            fadeFTimeout = setTimeout(hideFButton, 100);
+            clearTimeout(fadeMTimeout);
+            fadeMTimeout = setTimeout(hideMButton, 100);
         });
 
 
         window.matchMedia("(orientation: landscape)").addEventListener('change', (e) => {
+            modal.style.display = "none";
             if (e.matches) {
-                showButton(6000);
+                showFButton(6000);
+                showMButton(6000);
             } else {
-                hideButton();
+                hideFButton();
+                hideMButton();
                 if (screenfull.isEnabled) {
                     screenfull.exit();
                 }
@@ -525,6 +675,8 @@
                 const elements = document.querySelectorAll('.buttonpad');
                 if (screenfull.isFullscreen) {
                     console.log('Entered Fullscreen');
+                    fullscreenbutton.querySelector("#outfull").classList.remove('hidden');
+                    fullscreenbutton.querySelector("#infull").classList.add('hidden');
                     elements.forEach(el => {
                         el.style.bottom = "10vh";
                     });
@@ -532,6 +684,8 @@
                     elements.forEach(el => {
                         el.style.bottom = "10px";
                     });
+                    fullscreenbutton.querySelector('#outfull').classList.add('hidden');
+                    fullscreenbutton.querySelector('#infull').classList.remove('hidden');
                     console.log('Exited Fullscreen');
                 }
             });
@@ -546,7 +700,7 @@
             if (typeof Module !== 'undefined' && Module.ccall) {
                 if (document.hidden) {
                     Module.ccall('pauseAudioForWeb', 'v');
-                } else {
+                } else if (!mute) {
                     Module.ccall('resumeAudioForWeb', 'v');
                 }
             }
@@ -554,7 +708,6 @@
 
     </script>
     {{{ SCRIPT }}}
-    <script src=index.js async></script>
 </body>
 
 </html>
